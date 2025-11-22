@@ -223,7 +223,7 @@ jhunt/
 │ email (unique)   │          │ name             │
 │ hashed_password  │          │ url              │
 │ is_active        │          │ scraper_type     │
-│ is_admin         │          │ is_active        │
+│ active_role      │          │ is_active        │
 │ theme_preference │          │ created_at       │
 │ language         │          │ updated_at       │
 │ created_at       │          └──────────────────┘
@@ -237,31 +237,32 @@ jhunt/
          │                   │ normalized_title │
          │                   │ company          │
          │                   │ location         │
+         │                   │ logo_url         │
          │                   │ created_at       │
          │                   └────────┬─────────┘
          │                            │
-         │                            ▼
-         │                   ┌──────────────────┐
-         │                   │       Jobs       │◄─── Partycjonowane
-         │                   ├──────────────────┤
-         │                   │ id (PK)          │
-         │                   │ group_id (FK)    │◄─── Łączy duplikaty
-         │                   │ source_id (FK)   │
-         │                   │ external_id      │
-         │                   │ title            │
-         │                   │ company          │
-         │                   │ location         │
-         │                   │ salary_min       │
-         │                   │ salary_max       │
-         │                   │ url              │
-         │                   │ is_active        │
-         │                   │ first_seen_at    │
-         │                   │ last_seen_at     │
-         │                   │ last_updated_at  │◄─── Tracking zmian
-         │                   │ closed_at        │
-         │                   │ repost_count     │◄─── Ile razy wróciła
-         │                   │ created_at       │
-         │                   └────────┬─────────┘
+         ▼                            ▼
+┌──────────────────┐        ┌──────────────────┐
+│    UserRoles     │        │       Jobs       │◄─── Partycjonowane
+├──────────────────┤        ├──────────────────┤
+│ id (PK)          │        │ id (PK)          │
+│ user_id (FK)     │        │ group_id (FK)    │◄─── Łączy duplikaty
+│ role_name        │        │ source_id (FK)   │
+│ created_at       │        │ external_id      │
+└──────────────────┘        │ title            │
+                            │ company          │
+                            │ location         │
+                            │ salary_min       │
+                            │ salary_max       │
+                            │ url              │
+                            │ is_active        │
+                            │ first_seen_at    │
+                            │ last_seen_at     │
+                            │ last_updated_at  │◄─── Tracking zmian
+                            │ closed_at        │
+                            │ repost_count     │◄─── Ile razy wróciła
+                            │ created_at       │
+                            └────────┬─────────┘
          │                            │
          │                            ▼
          │                   ┌──────────────────┐
@@ -315,7 +316,7 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     hashed_password VARCHAR(255) NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
-    is_admin BOOLEAN DEFAULT FALSE,
+    active_role VARCHAR(50) DEFAULT 'JobSeeker',  -- 'JobSeeker', 'JobAdvertiser'
     theme_preference VARCHAR(10) DEFAULT 'dark',  -- 'dark', 'light'
     language VARCHAR(5) DEFAULT 'pl',             -- 'pl', 'en'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -324,7 +325,19 @@ CREATE TABLE users (
 CREATE INDEX idx_users_email ON users(email);
 ```
 
-#### 2. `job_sources`
+#### 2. `user_roles`
+```sql
+CREATE TABLE user_roles (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    role_name VARCHAR(50) NOT NULL,  -- 'JobSeeker', 'JobAdvertiser'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, role_name)
+);
+CREATE INDEX idx_user_roles_user ON user_roles(user_id);
+```
+
+#### 3. `job_sources`
 ```sql
 CREATE TABLE job_sources (
     id SERIAL PRIMARY KEY,
@@ -522,11 +535,13 @@ POST   /api/v1/auth/login             # Logowanie (zwraca JWT)
 POST   /api/v1/auth/refresh           # Odświeżanie tokenu
 ```
 
-#### Protected Endpoints (Jobseeker)
+#### Protected Endpoints (User)
 ```
-GET    /api/v1/users/me               # Profil użytkownika
+GET    /api/v1/users/me               # Profil użytkownika (z aktywną rolą)
 PATCH  /api/v1/users/me               # Aktualizacja profilu (theme, language)
+POST   /api/v1/users/switch-role      # Przełączenie kontekstu roli (active_role)
 
+# === Context: JobSeeker ===
 GET    /api/v1/keywords               # Lista słów kluczowych
 POST   /api/v1/keywords               # Dodaj słowo kluczowe
 DELETE /api/v1/keywords/{id}          # Usuń słowo kluczowe

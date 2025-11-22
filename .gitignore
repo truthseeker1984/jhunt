@@ -43,6 +43,11 @@ htmlcov/
 .env
 .env.local
 
+# Exception: Allow .env.example files (templates)
+!.env.example
+!backend/.env.example
+!frontend/.env.local.example
+
 # Logs
 *.log
 logs/

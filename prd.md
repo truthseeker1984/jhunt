@@ -85,9 +85,12 @@
     -   System wykrywa oferty, które zostały zamknięte i ponownie się pojawiły.
     -   Użytkownik widzi badge "Re-posted" oraz licznik ile razy oferta wróciła.
     -   Oferty wielokrotnie re-postowane są automatycznie podejrzewane o ghosting (kombinacja z JH-08).
-    -   Użytkownik śledz
-
-ący taką ofertę otrzymuje powiadomienie o jej powrocie jako "nowej" oferty z ostrzeżeniem.
+    -   Użytkownik śledzący taką ofertę otrzymuje powiadomienie o jej powrocie jako "nowej" oferty z ostrzeżeniem.
+-   **JH-18: Zarządzanie Rolami i Kontekstem:**
+    -   Użytkownik może posiadać wiele ról (np. `JobSeeker`, `JobAdvertiser`).
+    -   Administratorzy są definiowani w konfiguracji serwera (`.env`), nie w bazie danych.
+    -   Użytkownik działa w **aktywnym kontekście** jednej roli na raz (przełączanie ról w profilu, podobnie jak przełączanie kont w Google).
+    -   Interfejs i dostępne funkcje dostosowują się dynamicznie do aktywnej roli.
 
 ---
 
