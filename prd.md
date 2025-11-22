@@ -73,6 +73,21 @@
     -   **Faza 1:** Język Polski (PL) jako domyślny.
     -   **Faza 2:** Dodanie Języka Angielskiego (EN).
     -   **Wykrywanie:** 1. Profil Użytkownika, 2. Cookie (ostatni wybór), 3. Nagłówek przeglądarki (`Accept-Language`), 4. Domyślny (PL). Unikamy geolokalizacji po IP dla języka.
+-   **JH-15: Deduplikacja Ofert Między Portalami:**
+    -   System automatycznie grupuje tę samą ofertę znalezioną na różnych portalach (np. NoFluffJobs i JustJoinIT).
+    -   Użytkownik widzi jedną ofertę z informacją "Dostępna na X portalach" i może wybrać link do preferowanego portalu przy aplikowaniu.
+    -   Grupowanie oparte na znormalizowanym tytule, nazwie firmy i lokalizacji.
+-   **JH-16: Historia Zmian Ofert:**
+    -   System śledzi zmiany w ofertach (wynagrodzenie, lokalizacja, tytuł, link).
+    -   Użytkownik może zobaczyć pełną historię zmian dla śledzonej oferty w swoim profilu (Timeline).
+    -   Informacja przydatna do podejmowania decyzji o aplikowaniu.
+-   **JH-17: Wykrywanie Re-Postów (Oferty Powracające):**
+    -   System wykrywa oferty, które zostały zamknięte i ponownie się pojawiły.
+    -   Użytkownik widzi badge "Re-posted" oraz licznik ile razy oferta wróciła.
+    -   Oferty wielokrotnie re-postowane są automatycznie podejrzewane o ghosting (kombinacja z JH-08).
+    -   Użytkownik śledz
+
+ący taką ofertę otrzymuje powiadomienie o jej powrocie jako "nowej" oferty z ostrzeżeniem.
 
 ---
 
