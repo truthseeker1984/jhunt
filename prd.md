@@ -34,6 +34,8 @@
 -   **Walidacja formularzy:** Wykorzystanie natywnej walidacji HTML5 + Bootstrap - prostsze rozwiązanie lepiej wspierane przez AI.
 
 ### Infrastruktura i DevOps
+-   **GitHub:** System kontroli wersji i główne repozytorium kodu źródłowego projektu.
+-   **GitHub Actions:** Automatyzacja CI/CD do automatycznego deployowania każdej nowej wersji aplikacji (frontend do Vercel, backend do Mikrus VPS).
 -   **Cloudflare:** Działa jako pierwsza linia obrony (WAF, DDoS) i CDN dla całej aplikacji.
 -   **Vercel:** Platforma do darmowego i zautomatyzowanego hostingu aplikacji frontendowej.
 -   **Mikrus VPS:** Tani serwer do hostingu backendu i bazy danych.
@@ -95,3 +97,42 @@ Użytkownik (Przeglądarka)
              [ PostgreSQL ]      [ APScheduler ]
              (Baza Danych)       (Scraping Jobs)
 ```
+
+---
+
+## 6. Początkowe Źródła Scrapowania
+
+Na starcie projektu system będzie scrapował oferty pracy z następujących portali:
+
+1. **No Fluff Jobs** (nofluffjobs.com) - Portal z ofertami IT bez zbędnych informacji
+2. **Solid Jobs** (solidjobs.pl) - Portal skupiony na solidnych ofertach pracy
+3. **Just Join IT** (justjoin.it) - Popularny portal z ofertami w branży IT
+
+Lista źródeł będzie rozszerzana w kolejnych iteracjach projektu (feature JH-09: Zarządzanie Źródłami).
+
+---
+
+## 7. Strategia Cache'owania i Odświeżania UI
+
+### Cel
+Użytkownik wchodząc na stronę **musi** otrzymać najnowszą wersję aplikacji. Proces jest całkowicie automatyczny i transparentny, bez żadnych akcji po stronie użytkownika.
+
+### Realizacja Techniczna
+
+#### 1. Konfiguracja Cloudflare (Agresywny Cache)
+-   **Pełny Cache:** Zarówno assety statyczne, jak i pliki HTML są cache'owane przez Cloudflare dla maksymalnej wydajności i odciążenia serwerów.
+-   **Zasada:** Domyślnie serwujemy treść z cache Cloudflare ("Cache Everything").
+
+#### 2. Mechanizm Active Invalidation (Deploy Hook)
+-   **Wyzwalacz:** Proces CI/CD (GitHub Actions) po pomyślnym wdrożeniu nowej wersji na Vercel.
+-   **Akcja:** GitHub Actions wykonuje zapytanie do API Cloudflare (Purge Cache), czyszcząc cache dla domeny aplikacji.
+-   **Efekt:** Stara wersja jest natychmiast usuwana z brzegów sieci (Edge) Cloudflare.
+
+#### 3. Przepływ Danych (Flow)
+1.  **Standardowo:** Użytkownik otrzymuje błyskawicznie wersję z cache Cloudflare.
+2.  **Deploy:** Nowa wersja trafia na Vercel -> GitHub Actions czyści cache Cloudflare.
+3.  **Pierwsze wejście po deployu:** Cloudflare (pusty cache) pobiera nową wersję z Vercel (nowy HTML + nowe hashe assetów) i zapisuje ją w cache.
+4.  **Kolejne wejścia:** Użytkownicy otrzymują już nową, zcache'owaną wersję.
+
+#### Podsumowanie
+Używamy strategii **"Cache Everything + Purge on Deploy"**. Zapewnia to najwyższą możliwą wydajność (nawet HTML z cache'u) przy gwarancji, że po wdrożeniu nowej wersji, użytkownicy natychmiast (od pierwszego zapytania) otrzymają zaktualizowaną aplikację.
