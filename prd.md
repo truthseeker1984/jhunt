@@ -66,6 +66,13 @@
 -   **JH-10: Zgodność z RODO:** Wymóg prawny - użytkownik musi móc wyeksportować swoje dane (JSON/CSV) oraz zażądać ich usunięcia (art. 15, 17, 20 RODO).
 -   **JH-11: Import Aplikacji z Excel:** Możliwość zaimportowania historii aplikacji z pliku Excel dla użytkowników migrujących z innych rozwiązań.
 -   **JH-12: Export/Backup Danych:** Funkcja eksportu wszystkich danych użytkownika jako backup, szczególnie istotna we wczesnych fazach rozwoju aplikacji.
+-   **JH-13: Obsługa Motywów (Dark/Light Mode):**
+    -   Wsparcie dla trybu jasnego i ciemnego.
+    -   **Priorytety ustawień:** 1. Profil Użytkownika (Baza), 2. LocalStorage/Cookie (Niezalogowani), 3. Ustawienia Systemowe (prefers-color-scheme).
+-   **JH-14: Internacjonalizacja (i18n):**
+    -   **Faza 1:** Język Polski (PL) jako domyślny.
+    -   **Faza 2:** Dodanie Języka Angielskiego (EN).
+    -   **Wykrywanie:** 1. Profil Użytkownika, 2. Cookie (ostatni wybór), 3. Nagłówek przeglądarki (`Accept-Language`), 4. Domyślny (PL). Unikamy geolokalizacji po IP dla języka.
 
 ---
 
@@ -136,3 +143,26 @@ Użytkownik wchodząc na stronę **musi** otrzymać najnowszą wersję aplikacji
 
 #### Podsumowanie
 Używamy strategii **"Cache Everything + Purge on Deploy"**. Zapewnia to najwyższą możliwą wydajność (nawet HTML z cache'u) przy gwarancji, że po wdrożeniu nowej wersji, użytkownicy natychmiast (od pierwszego zapytania) otrzymają zaktualizowaną aplikację.
+
+---
+
+## 8. Polityka Bezpieczeństwa i Geolokalizacja (Cloudflare WAF)
+
+### Geolokalizacja i Blokowanie Ruchu
+Konfiguracja Firewall Rules (WAF) w Cloudflare ma na celu eliminację ruchu z regionów wysokiego ryzyka oraz ruchu nieorganicznego.
+
+-   **Kraje Blokowane (High Risk):**
+    -   Rosja (RU)
+    -   Chiny (CN)
+    -   Korea Północna (KP)
+    -   Białoruś (BY)
+    -   Iran (IR)
+-   **Akcja:** `Block` (całkowite odrzucenie połączenia).
+
+### Filtrowanie Ruchu i Ochrona
+-   **Bot Fight Mode:** Włączony tryb ochrony przed znanymi botami.
+-   **Hosting/Cloud ASN Block:** Blokowanie ruchu pochodzącego z numerów ASN przypisanych do centrów danych (np. AWS, DigitalOcean, Hetzner) dla endpointów użytkownika, aby wyeliminować boty udające ludzi.
+-   **Rate Limiting:**
+    -   Limit zapytań dla endpointu `/api/auth/login` (ochrona przed Brute Force).
+    -   Globalny limit zapytań na IP (ochrona przed Scrapingiem/DDoS).
+-   **TLS/SSL:** Wymuszone HTTPS (HSTS) i minimum TLS 1.2.
