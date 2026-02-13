@@ -14,22 +14,22 @@
 
 - [x] Inicjalizacja Git.
 - [ ] Konfiguracja `.env` (Backend) i `.env.local` (Frontend).
-- [ ] Struktura katalogów.
+- [x] Struktura katalogów.
 
 ### 0.2. Production Infrastructure Setup
 
-- [ ] **Mikrus VPS (Backend):**
-  - [ ] Instalacja Python 3.11, PostgreSQL, Nginx.
-  - [ ] Konfiguracja domeny `api.jhunt.com` (SSL via Certbot).
+- [x] **Mikrus VPS (Backend):**
+  - [x] Instalacja Python 3.12, PostgreSQL.
+  - [x] Konfiguracja domeny `api.jhunt.pl` (Cloudflare Tunnel).
   - [ ] Konfiguracja bazy danych (User, DB, Partycjonowanie).
   - [ ] Zmienna środowiskowa `ADMIN_EMAILS` w `.env`.
-- [ ] **Vercel (Frontend):**
-  - [ ] Podłączenie repozytorium GitHub.
-  - [ ] Konfiguracja domeny `jhunt.com`.
+- [x] **Vercel (Frontend):**
+  - [x] Podłączenie repozytorium GitHub.
+  - [x] Konfiguracja domeny `jhunt.pl`.
 - [ ] **GitHub Actions (CI/CD):**
   - [ ] `deploy-backend.yml` (SSH do Mikrus).
   - [ ] `deploy-frontend.yml` (Vercel).
-  - [ ] Test: Pusty "Hello World" deployuje się automatycznie.
+  - [x] Test: Pusty "Hello World" deployuje się automatycznie (Manualnie na razie).
 
 ---
 
