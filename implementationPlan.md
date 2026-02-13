@@ -33,6 +33,25 @@
 
 ---
 
+## Faza 0.5: Data Modeling & Class Design (Critical Step)
+
+**Cel:** Zaprojektowanie fundamentów systemu (baza danych + klasy) przed napisaniem jakiejkolwiek logiki biznesowej.
+
+⚠️ **WARUNEK STOP:** Przejście do implementacji (Faza 1) jest możliwe **DOPIERO po zatwierdzeniu** przez Użytkownika:
+1. Diagramu ERD (tabel bazy danych) w Mermaid.
+2. Definicji klas backendowych i ich pól.
+
+### 0.5.1. Backend Class Design
+- [ ] Zidentyfikowanie kluczowych encji na podstawie priorytetów funkcjonalnych.
+- [ ] Zaprojektowanie klas Pydantic/SQLAlchemy (pola, typy, relacje).
+
+### 0.5.2. Database Schema Design
+- [ ] Stworzenie diagramu ERD w Mermaid.
+- [ ] Uwzględnienie partycjonowania i indeksów.
+- [ ] Weryfikacja zgodności z PRD.
+
+---
+
 ## Faza 1: Landing Page & User Onboarding (Frontend-First)
 
 **Cel:** Użytkownik wchodzi, rejestruje się i konfiguruje profil.
