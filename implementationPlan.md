@@ -35,12 +35,16 @@
 
 ## Faza 1: Landing Page & User Onboarding (Frontend-First)
 
-**Cel:** Użytkownik wchodzi, wybiera motyw, rejestruje się i konfiguruje profil.
+**Cel:** Użytkownik wchodzi, rejestruje się i konfiguruje profil.
+
+### 1.0. Under constricton (Public)
+
+- [] landing page z przyciskiem logowania tylko dla pierwszych testowych userow. Na strodku grafika z under construction.
 
 ### 1.1. Landing Page (Public)
 
 - [ ] Implementacja Layoutu (Header/Footer).
-- [ ] **Feature:** Przełącznik Motywu (Dark/Light) - działa dla niezalogowanych.
+- [ ] **Feature:** Przełącznik Motywu (Dark/Light) - działa i pojawia się tylko dla zalogowanych. Dla niezalogowanych defualtowy motyw jest pobrany z przegladarki, a jesli tak sie nie da to po prostu jasny motyw.
 - [ ] Treść Landing Page (Hero section).
 - [ ] Przycisk "Zaloguj / Dołącz".
 
