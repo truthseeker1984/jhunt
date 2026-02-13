@@ -39,6 +39,11 @@
 - ✅ **Frontend DNS:**
   - Rekord A (`@`) -> Vercel (`76.76.21.21`)
   - Rekord CNAME (`www`) -> Vercel
+- ✅ **Security (WAF & Bots):**
+  - Bot Fight Mode: ON
+  - AI Scrapers Blocked: ON (All pages)
+  - WAF Rule: Block High Risk Countries (RU, CN, KP, BY, IR)
+  - Security Level: Medium
 
 ### 5. Backend (FastAPI)
 
@@ -55,17 +60,13 @@
 - ✅ Podpięta domena: `https://jhunt.pl`
 
 ---
-
-## ⏳ CO POZOSTAŁO DO ZROBIENIA
-
-### Faza 0: Dokończenie Infrastruktury (Końcówka)
-
-1. **Cloudflare Security:**
+Cloudflare Security:**
    - WAF Rules (Geo-blocking)
    - Bot Fight Mode
    - Rate Limiting
-
-2. **Baza Danych:**
+2 (Backend)
+2. **Baza Danych:**entu backendu (SSH do VPS)
+   - *Frontd CI/CD jes obsłżone natywnie przez Vercel.*
    - Konfiguracja Alembic
    - Pierwsze migracje (tworzenie tabel)
 
