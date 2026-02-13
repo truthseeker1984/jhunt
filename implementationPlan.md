@@ -26,10 +26,10 @@
 - [x] **Vercel (Frontend):**
   - [x] Podłączenie repozytorium GitHub.
   - [x] Konfiguracja domeny `jhunt.pl`.
-- [ ] **GitHub Actions (CI/CD):**
-  - [ ] `deploy-backend.yml` (SSH do Mikrus).
-  - [ ] `deploy-frontend.yml` (Vercel).
-  - [x] Test: Pusty "Hello World" deployuje się automatycznie (Manualnie na razie).
+- [x] **GitHub Actions (CI/CD):**
+  - [x] `deploy-backend.yml` (SSH do Mikrus).
+  - [x] `deploy-frontend.yml` (Vercel Native Integration).
+  - [x] Test: Pusty "Hello World" deployuje się automatycznie.
 
 ---
 
