@@ -58,9 +58,9 @@
 
 ### 1.0. Under construction (Public)
 
-- [ ] Konfiguracja **Cloudflare Access (Zero Trust)**:
-  - [ ] Blokada dostępu do `jhunt.pl` dla wszystkich poza zaufanymi emailami.
-  - [ ] Ekran logowania Cloudflare zamiast publicznego dostępu.
+- [x] Konfiguracja **Cloudflare Access (Zero Trust)**:
+  - [x] Blokada dostępu do `jhunt.pl` dla wszystkich poza zaufanymi emailami.
+  - [x] Ekran logowania Cloudflare zamiast publicznego dostępu.
 - [ ] Landing page z przyciskiem logowania tylko dla pierwszych testowych userów. Na środku grafika z "Under Construction".
 
 ### 1.1. Landing Page (Public)
