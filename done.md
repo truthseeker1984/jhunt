@@ -1,7 +1,7 @@
 # Podsumowanie Postępów Projektu J(ob)Hunt
 
-**Data:** 13 lutego 2026  
-**Status:** Infrastruktura gotowa (Hello World Live)
+**Data:** 14 lutego 2026  
+**Status:** Infrastruktura gotowa + Security (Zero Trust)
 
 ---
 
@@ -44,6 +44,10 @@
   - AI Scrapers Blocked: ON (All pages)
   - WAF Rule: Block High Risk Countries (RU, CN, KP, BY, IR)
   - Security Level: Medium
+- ✅ **Cloudflare Access (Zero Trust):**
+  - Blokada dostępu: `jhunt.pl` (Authentication Required)
+  - Metoda logowania: One-time PIN (Email)
+  - Polityka: Allow Admin Email
 
 ### 5. Backend (FastAPI)
 
