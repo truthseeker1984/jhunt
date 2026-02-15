@@ -602,10 +602,12 @@ POST   /api/v1/admin/scraper/trigger  # Ręczne uruchomienie scrapera
        │  { access_token, refresh_token } │
        │◄─────────────────────────────────┤
        │                                  │
-       │  Store tokens (LocalStorage)     │
+       │  Set-Cookie: access_token=...    │
+       │  Set-Cookie: refresh_token=...   │
+       │  (HttpOnly, Secure, SameSite)    │
        │                                  │
        │  GET /api/v1/jobs                │
-       │  Authorization: Bearer <token>   │
+       │  Cookie: access_token=...        │
        ├─────────────────────────────────►│
        │                                  │ Validate JWT
        │                                  │ Extract user_id
