@@ -68,37 +68,46 @@ erDiagram
 ## 2. Zabezpieczenia (Security Implementation)
 
 ### 2.1. Przechowywanie Haseł
-*   **Algorytm:** **Argon2id** (obecny standard branżowy, odporniejszy na ataki GPU niż bcrypt).
-*   **Sól (Salt):** Generowana automatycznie i unikalna dla każdego użytkownika.
-*   **Polityka:** Baza danych NIGDY nie widzi hasła w formie jawnej.
+
+- **Algorytm:** **Argon2id** (obecny standard branżowy, odporniejszy na ataki GPU niż bcrypt).
+- **Sól (Salt):** Generowana automatycznie i unikalna dla każdego użytkownika.
+- **Polityka:** Baza danych NIGDY nie widzi hasła w formie jawnej.
 
 ### 2.2. Ochrona Sesji (JWT + Refresh Token)
-*   **Storage Strategy:** **HttpOnly Cookies** (Dla obu tokenów).
-    *   Ciasteczka są niewidoczne dla JavaScript (ochrona przed XSS).
-    *   Wymagają flag `Secure` (HTTPS) i `SameSite=Strict`.
-*   **Access Token (JWT):** Krótki czas życia (np. 15 minut). Przechowywany w ciasteczku `access_token`.
-*   **Refresh Token:** Długi czas życia (np. 7 dni). Przechowywany w ciasteczku `refresh_token`.
-*   **Tabela `RefreshTokens`:** Pozwala na "zdalne wylogowanie" wszystkich urządzeń poprzez zmianę flagi `is_revoked`.
+
+- **Storage Strategy:** **HttpOnly Cookies** (Dla obu tokenów).
+  - Ciasteczka są niewidoczne dla JavaScript (ochrona przed XSS).
+  - Wymagają flag `Secure` (HTTPS) i `SameSite=Strict`.
+- **Access Token (JWT):** Krótki czas życia (np. 15 minut). Przechowywany w ciasteczku `access_token`.
+- **Refresh Token:** Długi czas życia (np. 7 dni). Przechowywany w ciasteczku `refresh_token`.
+- **Tabela `RefreshTokens`:** Pozwala na "zdalne wylogowanie" wszystkich urządzeń poprzez zmianę flagi `is_revoked`.
 
 ### 2.3. Ochrona przed atakami
-*   **SQL Injection:** Użycie **SQLAlchemy ORM**, który automatycznie escapuje zapytania.
-*   **Brute Force:** Tabela `LoginAttempts` pozwala na blokowanie IP po X nieudanych próbach w ciągu Y minut (Rate Limiting).
-*   **Account Takeover:** Przy zmianie hasła unieważniane są wszystkie aktywne tokeny sesyjne (`RefreshTokens`).
+
+- **SQL Injection:** Użycie **SQLAlchemy ORM**, który automatycznie escapuje zapytania.
+- **Brute Force:** Tabela `LoginAttempts` pozwala na blokowanie IP po X nieudanych próbach w ciągu Y minut (Rate Limiting).
+- **Account Takeover:** Przy zmianie hasła unieważniane są wszystkie aktywne tokeny sesyjne (`RefreshTokens`).
 
 ### 2.4. Usuwanie Konta (GDPR/RODO)
-*   **Procedura:** Usunięcie konta jest operacją **trwałą (Hard Delete)**.
-*   **Kaskadowość:** Usunięcie rekordu z `Users` automatycznie usuwa powiązane `UserRoles`, `RefreshTokens`, oraz dane osobowe.
-*   **Logi:** W logach systemowych pozostaje jedynie ślad o usunięciu ID (bez danych osobowych).
+
+- **Procedura:** Usunięcie konta jest operacją **trwałą (Hard Delete)**.
+- **Kaskadowość:** Usunięcie rekordu z `Users` automatycznie usuwa powiązane `UserRoles`, `RefreshTokens`, oraz dane osobowe.
+- **Logi:** W logach systemowych pozostaje jedynie ślad o usunięciu ID (bez danych osobowych).
 
 ### 2.5. Infrastruktura Email (SMTP)
-*   **Cel:** Weryfikacja email przy rejestracji, Reset hasła.
-*   **Rozwiązanie:** Zewnętrzny dostawca Transactional Email (np. **Resend** lub **SendGrid**) dla wysokiej dostarczalności.
-*   **Konfiguracja:** Dane SMTP trzymane w zmiennych środowiskowych (`.env`) na serwerze, nigdy w kodzie.
-*   **Flow:** Backend kolejkuje zadania wysyłki (Background Tasks), aby nie blokować API.
+
+- **Wybrany Dostawca:** **Resend** (Decyzja: 16.02.2026).
+- **Uzasadnienie Wyboru:**
+  - **Developer Experience:** Nowoczesne SDK, łatwa konfiguracja w Pythonie.
+  - **Koszt:** Darmowy limit 3,000 maili/mies (wystarczający dla MVP).
+  - **Technologia:** Wsparcie dla **React Email** (łatwe tworzenie estetycznych szablonów).
+  - **Dostarczalność:** Wysoka reputacja IP (maile nie trafiają do SPAMu).
+- **Konfiguracja:** Dane SMTP/API Key trzymane w zmiennych środowiskowych (`.env`) na serwerze.
+- **Flow:** Backend kolejkuje zadania wysyłki (Background Tasks - APScheduler/Celery), aby nie blokować API.
 
 --- -- Ban / Soft Delete
 is_verified BOOLEAN DEFAULT FALSE, -- Email Confirmed
-    
+
 ## 3. Definicje SQL (Implementacja)
 
 ```sql
@@ -159,9 +168,11 @@ CREATE INDEX idx_login_attempts_ip ON login_attempts(ip_address, attempt_time);
 ## 4. Flow Weryfikacji (Jak to działa?)
 
 ### Dlaczego `VerificationToken`?
+
 Jest to bezpieczny sposób na sprawdzenie, czy użytkownik ma dostęp do skrzynki email, bez trzymania "klucza" w bazie danych w formie jawnej.
 
 ### Krok 1: Rejestracja
+
 1. Użytkownik podaje email: `jan@example.com`.
 2. System tworzy konto z `is_verified = FALSE`.
 3. System generuje losowy, długi token (np. `abc123xyz...`).
@@ -169,6 +180,7 @@ Jest to bezpieczny sposób na sprawdzenie, czy użytkownik ma dostęp do skrzynk
 5. Oryginalny token wysyłamy na maila w linku: `jhunt.pl/verify?token=abc123xyz...`.
 
 ### Krok 2: Kliknięcie w link
+
 1. Użytkownik klika w link.
 2. Frontend wysyła token `abc123xyz...` do API.
 3. Backend liczy hash otrzymanego tokenu.
@@ -177,4 +189,5 @@ Jest to bezpieczny sposób na sprawdzenie, czy użytkownik ma dostęp do skrzynk
    - **Jeśli nie pasuje:** Błąd (link nieprawidłowy).
 
 ### Bezpieczeństwo
+
 Gdyby haker wykradł bazę danych, zobaczy tylko hashe tokenów. Nie jest w stanie odtworzyć oryginalnych tokenów, więc **nie może przejąć kont ani aktywować ich za użytkowników**.

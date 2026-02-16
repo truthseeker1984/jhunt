@@ -276,7 +276,7 @@ jhunt/
          │                   │ new_value        │
          │                   │ changed_at       │
          │                   └──────────────────┘
-         │                            
+         │
          ├────────────────────────────┤
          │                            │
          ▼                            ▼
@@ -310,6 +310,7 @@ jhunt/
 ### Tabele - Szczegóły
 
 #### 1. `users`
+
 ```sql
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -326,6 +327,7 @@ CREATE INDEX idx_users_email ON users(email);
 ```
 
 #### 2. `user_roles`
+
 ```sql
 CREATE TABLE user_roles (
     id SERIAL PRIMARY KEY,
@@ -338,6 +340,7 @@ CREATE INDEX idx_user_roles_user ON user_roles(user_id);
 ```
 
 #### 3. `job_sources`
+
 ```sql
 CREATE TABLE job_sources (
     id SERIAL PRIMARY KEY,
@@ -351,6 +354,7 @@ CREATE TABLE job_sources (
 ```
 
 #### 3. `job_groups` (Grupowanie Duplikatów)
+
 ```sql
 CREATE TABLE job_groups (
     id BIGSERIAL PRIMARY KEY,
@@ -367,6 +371,7 @@ CREATE INDEX idx_job_groups_lookup ON job_groups(normalized_title, company);
 **Cel:** Grupuje oferty z różnych portali, które są tym samym ogłoszeniem.
 
 **Przykład:**
+
 ```
 group_id=1: "Senior Python Developer" + "Google" + "Warszawa"
   ├─ job_id=10 (NoFluffJobs)
@@ -375,13 +380,14 @@ group_id=1: "Senior Python Developer" + "Google" + "Warszawa"
 ```
 
 #### 4. `jobs` (Partycjonowane)
+
 ```sql
 CREATE TABLE jobs (
     id BIGSERIAL,
     group_id BIGINT REFERENCES job_groups(id) ON DELETE SET NULL,  -- Grupowanie duplikatów
     source_id INTEGER NOT NULL REFERENCES job_sources(id),
     external_id VARCHAR(255) NOT NULL,  -- ID z zewnętrznego portalu
-    
+
     -- Dane oferty
     title VARCHAR(500) NOT NULL,
     company VARCHAR(255) NOT NULL,
@@ -389,7 +395,7 @@ CREATE TABLE jobs (
     salary_min INTEGER,
     salary_max INTEGER,
     url VARCHAR(1000) NOT NULL,
-    
+
     -- Statusy i daty
     is_active BOOLEAN DEFAULT TRUE,
     first_seen_at TIMESTAMP NOT NULL,       -- Kiedy PO RAZ PIERWSZY znaleziono
@@ -397,9 +403,9 @@ CREATE TABLE jobs (
     last_updated_at TIMESTAMP,              -- Kiedy dane się zmieniły (salary, title, etc.)
     closed_at TIMESTAMP,                    -- Kiedy oferta zniknęła z portalu
     repost_count INTEGER DEFAULT 0,         -- Ile razy oferta wróciła po zamknięciu
-    
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     PRIMARY KEY (id, source_id),
     UNIQUE(source_id, external_id)  -- Unikalna kombinacja source + external_id
 ) PARTITION BY LIST (source_id);
@@ -418,23 +424,25 @@ CREATE INDEX idx_jobs_title_gin ON jobs USING gin(to_tsvector('english', title))
 ```
 
 **Kolumna `repost_count`:**
+
 - Zlicza ile razy oferta była closed → active
 - Jeśli > 0 → pokazujemy użytkownikowi badge "Re-posted" (potencjalny ghosting)
 
 #### 5. `job_history` (Historia Zmian - Partycjonowane)
+
 ```sql
 CREATE TABLE job_history (
     id BIGSERIAL,
     job_id BIGINT NOT NULL,
     source_id INTEGER NOT NULL,
-    
+
     -- Szczegóły zmiany
     field_name VARCHAR(50) NOT NULL,  -- 'salary_min', 'salary_max', 'title', 'location', 'url'
     old_value TEXT,
     new_value TEXT,
-    
+
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     PRIMARY KEY (id, source_id),
     FOREIGN KEY (job_id, source_id) REFERENCES jobs(id, source_id) ON DELETE CASCADE
 ) PARTITION BY LIST (source_id);
@@ -448,6 +456,7 @@ CREATE INDEX idx_job_history_date ON job_history(changed_at);
 ```
 
 **Przykład wpisu:**
+
 ```
 | job_id | field_name  | old_value | new_value | changed_at  |
 |--------|-------------|-----------|-----------|-------------|
@@ -456,6 +465,7 @@ CREATE INDEX idx_job_history_date ON job_history(changed_at);
 ```
 
 #### 6. `keywords`
+
 ```sql
 CREATE TABLE keywords (
     id SERIAL PRIMARY KEY,
@@ -468,29 +478,30 @@ CREATE INDEX idx_keywords_user ON keywords(user_id);
 ```
 
 #### 7. `user_job_status` (Śledzenie Ofert Użytkownika)
+
 ```sql
 CREATE TABLE user_job_status (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     group_id BIGINT REFERENCES job_groups(id) ON DELETE CASCADE,  -- Śledzi GRUPĘ (nie pojedynczy job)
-    
+
     -- Status procesu rekrutacji
     status VARCHAR(50) DEFAULT 'interested',  -- 'interested', 'applied', 'interview', 'rejected', 'accepted'
-    
+
     -- Wybór portalu
     selected_job_id BIGINT,  -- Który konkretny job wybrał (z której grupy = z jakiego portalu)
-    
+
     -- Kolejność i notatki
     display_order INTEGER DEFAULT 0,  -- Drag-and-drop (MVP: Integer, Scale: Lexorank)
     notes TEXT,
-    
+
     -- Tracking
     applied_at TIMESTAMP,
     seen_as_new BOOLEAN DEFAULT TRUE,  -- Czy użytkownik widział jako nową ofertę (dla re-posts)
-    
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     UNIQUE(user_id, group_id)  -- Użytkownik może śledzić grupę tylko raz
 );
 CREATE INDEX idx_user_job_status_user ON user_job_status(user_id);
@@ -502,15 +513,18 @@ CREATE INDEX idx_user_job_status_group ON user_job_status(group_id);
 `selected_job_id` (konkretny portal) musi należeć do `group_id` (grupa ofert). Baza danych nie wymusi tego relacją foreign key wprost (złożoność), więc **Service Layer musi to walidować** przed zapisem.
 
 **Kolumna `seen_as_new`:**
+
 - Używana do oznaczania ofert, które wróciły (re-post)
 - Gdy oferta wraca po closed → `seen_as_new = TRUE` (pokazujemy jako nową z badge "Re-posted")
 - Użytkownik klika → `seen_as_new = FALSE`
 
 **Kolumna `selected_job_id`:**
+
 - Użytkownik wybiera z której wersji oferty (portal) chce aplikować
 - Przechowuje ID konkretnego job z grupy
 
 #### 8. `company_blacklist`
+
 ```sql
 CREATE TABLE company_blacklist (
     id SERIAL PRIMARY KEY,
@@ -529,6 +543,7 @@ CREATE INDEX idx_blacklist_user ON company_blacklist(user_id);
 ### API Endpoints Overview
 
 #### Public Endpoints
+
 ```
 POST   /api/v1/auth/register          # Rejestracja (jeśli feature flag włączony)
 POST   /api/v1/auth/login             # Logowanie (zwraca JWT)
@@ -536,6 +551,7 @@ POST   /api/v1/auth/refresh           # Odświeżanie tokenu
 ```
 
 #### Protected Endpoints (User)
+
 ```
 GET    /api/v1/users/me               # Profil użytkownika (z aktywną rolą)
 PATCH  /api/v1/users/me               # Aktualizacja profilu (theme, language)
@@ -565,6 +581,7 @@ POST   /api/v1/import                 # Import aplikacji z Excel
 ```
 
 #### Admin Endpoints
+
 ```
 GET    /api/v1/admin/sources          # Lista źródeł do scrapowania
 POST   /api/v1/admin/sources          # Dodaj źródło
@@ -618,7 +635,24 @@ POST   /api/v1/admin/scraper/trigger  # Ręczne uruchomienie scrapera
        │                                  │
 ```
 
-### Feature Flags (Bezpieczeństwo)
+### 4.4. Email Infrastructure (Resend)
+
+**Wybrany dostawca:** **Resend**
+
+**Dlaczego Resend?**
+
+1.  **Developer Experience:** Biblioteka Python SDK jest minimalistyczna i nowoczesna.
+2.  **Free Tier:** 3,000 maili miesięcznie za darmo (vs 100/dzień w SendGrid).
+3.  **React Email:** Możliwość kodowania szablonów maili w React (spójność z frontendem Next.js).
+4.  **Dostarczalność:** Nowe, czyste adresy IP zapewniające, że maile nie trafiają do SPAM.
+
+**Integracja:**
+
+- Backend używa API Resend (przez SDK lub SMTP).
+- Klucze API przechowywane w `.env`.
+- Wysyłka asynchroniczna (Background Tasks).
+
+### 4.5. Feature Flags (Bezpieczeństwo)
 
 **Problem:** Registration musi być wyłączalny po dodaniu pierwszego użytkownika.
 
@@ -631,15 +665,15 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # Database
     DATABASE_URL: str
-    
+
     # Security
     SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
+
     # Feature Flags
     ALLOW_REGISTRATION: bool = True  # Set to False in production .env
-    
+
     class Config:
         env_file = ".env"
 
@@ -662,6 +696,7 @@ async def register(user_data: UserCreate):
 ```
 
 **Deployment:**
+
 1. Stwórz użytkownika przez API (feature flag = True).
 2. W pliku `.env` na serwerze ustaw `ALLOW_REGISTRATION=false`.
 3. Restart backendu.
@@ -686,19 +721,19 @@ async def process_scraped_job(self, scraped_data: dict, source_id: int):
     - Re-posty (oferty, które wracają)
     - Historię zmian
     """
-    
+
     # 1. NORMALIZACJA (do wykrywania duplikatów)
     normalized_title = self._normalize_title(scraped_data['title'])
     company = scraped_data['company'].strip()
     location = scraped_data.get('location', '').strip()
-    
+
     # 2. ZNAJDŹ/STWÓRZ GRUPĘ (grupowanie duplikatów między portalami)
     job_group = db.query(JobGroup).filter(
         JobGroup.normalized_title == normalized_title,
         JobGroup.company == company,
         JobGroup.location == location
     ).first()
-    
+
     if not job_group:
         job_group = JobGroup(
             normalized_title=normalized_title,
@@ -708,14 +743,14 @@ async def process_scraped_job(self, scraped_data: dict, source_id: int):
         db.add(job_group)
         db.commit()
         db.refresh(job_group)
-    
+
     # 3. SPRAWDŹ CZY OFERTA JUŻ ISTNIEJE W TYM ŹRÓDLE
     external_id = scraped_data['external_id']
     existing_job = db.query(Job).filter(
         Job.source_id == source_id,
         Job.external_id == external_id
     ).first()
-    
+
     if existing_job:
         # === ISTNIEJĄCA OFERTA ===
         await self._update_existing_job(existing_job, scraped_data, job_group.id)
@@ -726,10 +761,10 @@ async def process_scraped_job(self, scraped_data: dict, source_id: int):
 
 async def _update_existing_job(self, job: Job, new_data: dict, group_id: int):
     """Aktualizuje istniejącą ofertę"""
-    
+
     # Wykryj zmiany w danych
     changes = self._detect_changes(job, new_data)
-    
+
     if changes:
         # Zapisz historię zmian
         for field, (old_val, new_val) in changes.items():
@@ -742,34 +777,34 @@ async def _update_existing_job(self, job: Job, new_data: dict, group_id: int):
                 changed_at=datetime.now()
             )
             db.add(history_entry)
-            
+
             # Aktualizuj pole w job
             setattr(job, field, new_val)
-        
+
         job.last_updated_at = datetime.now()
-    
+
     # Zawsze aktualizuj last_seen_at (oferta wciąż żyje)
     job.last_seen_at = datetime.now()
-    
+
     # Jeśli oferta była zamknięta, a teraz wraca → RE-POST!
     if not job.is_active:
         job.is_active = True
         job.closed_at = None
         job.repost_count += 1  # Inkrementuj licznik re-postów
-        
+
         # Oznacz użytkowników, którzy tę grupę śledzą
         # że mają nową ofertę (re-post)
         await self._mark_repost_for_users(job.group_id)
-    
+
     # Aktualizuj group_id (może się zmienić jeśli zmienił się tytuł/firma)
     job.group_id = group_id
-    
+
     db.commit()
 
 
 async def _create_new_job(self, data: dict, source_id: int, group_id: int):
     """Tworzy nową ofertę"""
-    
+
     new_job = Job(
         group_id=group_id,
         source_id=source_id,
@@ -821,14 +856,14 @@ async def mark_missing_jobs_as_closed(self, source_id: int, found_external_ids: 
 def _normalize_title(self, title: str) -> str:
     """
     Normalizuje tytuł do wykrywania duplikatów.
-    
+
     Przykłady:
       "Senior Python Developer" → "senior python developer"
       "Python Dev (Senior)"     → "senior python developer"
       "Sr. Python Developer"    → "senior python developer"
     """
     title = title.lower()
-    
+
     # Zamień skróty na pełne formy
     replacements = {
         r'\bsr\.?\b': 'senior',
@@ -837,30 +872,30 @@ def _normalize_title(self, title: str) -> str:
         r'\bdev\.?\b': 'developer',
         r'\beng\.?\b': 'engineer',
     }
-    
+
     for pattern, replacement in replacements.items():
         title = re.sub(pattern, replacement, title)
-    
+
     # Usuń znaki specjalne i nadmiarowe spacje
     title = re.sub(r'[^\w\s]', '', title)
     title = re.sub(r'\s+', ' ', title).strip()
-    
+
     return title
 
 
 def _detect_changes(self, existing: Job, new_data: dict) -> dict:
     """Wykrywa zmiany między starymi a nowymi danymi"""
-    
+
     changes = {}
     fields_to_track = ['title', 'salary_min', 'salary_max', 'location', 'url']
-    
+
     for field in fields_to_track:
         old_value = getattr(existing, field)
         new_value = new_data.get(field)
-        
+
         if old_value != new_value and new_value is not None:
             changes[field] = (old_value, new_value)
-    
+
     return changes
 ```
 
@@ -952,6 +987,7 @@ Frontend (Job Details):
 **Biblioteka:** `@dnd-kit/core` (React DnD moderna alternatywa)
 
 **Flow:**
+
 1. Użytkownik przeciąga wiersz w tabeli.
 2. Frontend aktualizuje lokalną kolejność (`display_order`).
 3. Wywołuje `PATCH /api/v1/applications/{id}` z nowym `display_order`.
@@ -959,8 +995,12 @@ Frontend (Job Details):
 
 ```tsx
 // Przykład komponentu (uproszczony)
-import { DndContext, closestCenter } from '@dnd-kit/core';
-import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { DndContext, closestCenter } from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 function JobTable({ jobs, onReorder }) {
   const handleDragEnd = (event) => {
@@ -987,20 +1027,20 @@ function JobTable({ jobs, onReorder }) {
 
 ```typescript
 // frontend/src/lib/api.ts
-import axios from 'axios';
+import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.jhunt.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.jhunt.com";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 // Request interceptor - dodaj token
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem("access_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -1016,7 +1056,7 @@ apiClient.interceptors.response.use(
       // If refresh fails, redirect to /login
     }
     return Promise.reject(error);
-  }
+  },
 );
 ```
 
@@ -1072,15 +1112,15 @@ from app.schemas.job import JobCreate
 
 class BaseScraper(ABC):
     """Abstract base class dla scraperów"""
-    
+
     def __init__(self, source_url: str):
         self.source_url = source_url
-    
+
     @abstractmethod
     async def scrape(self) -> List[JobCreate]:
         """Implementacja scrapowania dla konkretnego portalu"""
         pass
-    
+
     async def fetch_page(self, url: str) -> str:
         """Wspólna metoda do pobierania HTML"""
         # HTTPX async client
@@ -1124,8 +1164,8 @@ class BaseScraper(ABC):
 # Upsert logic (PostgreSQL)
 INSERT INTO jobs (source_id, external_id, title, company, ...)
 VALUES (?, ?, ?, ?, ...)
-ON CONFLICT (source_id, external_id) 
-DO UPDATE SET 
+ON CONFLICT (source_id, external_id)
+DO UPDATE SET
     last_seen_at = CURRENT_TIMESTAMP,
     is_active = TRUE;
 ```
@@ -1144,11 +1184,11 @@ def get_jobs_for_user(user_id: int):
         # Match keywords (join with user keywords)
         # Exclude blacklisted companies
     ).all()
-    
+
     for job in jobs:
         days_active = (datetime.now() - job.first_seen_at).days
         job.is_ghosting = days_active >= 90
-    
+
     return jobs
 ```
 
@@ -1159,6 +1199,7 @@ def get_jobs_for_user(user_id: int):
 ### Cloudflare Configuration
 
 #### DNS Settings
+
 ```
 Type    Name        Content                 Proxy
 A       @           <Vercel IP>             Proxied (Orange Cloud)
@@ -1166,6 +1207,7 @@ CNAME   api         mikrus-vps.domain.com   Proxied (Orange Cloud)
 ```
 
 #### Firewall Rules (WAF)
+
 ```javascript
 // Rule 1: Geo-blocking
 (ip.geoip.country in {"RU" "CN" "KP" "BY" "IR"}) → Block
@@ -1181,6 +1223,7 @@ CNAME   api         mikrus-vps.domain.com   Proxied (Orange Cloud)
 ```
 
 #### Cache Rules
+
 ```javascript
 // Cache Rule 1: Cache Everything
 (hostname eq "jhunt.com") → Cache Everything, Edge TTL: 1 hour
@@ -1288,15 +1331,15 @@ on:
   push:
     branches: [main]
     paths:
-      - 'frontend/**'
-      - '.github/workflows/deploy-frontend.yml'
+      - "frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
@@ -1304,7 +1347,7 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: ./frontend
-      
+
       - name: Purge Cloudflare Cache
         run: |
           curl -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/purge_cache" \
@@ -1324,15 +1367,15 @@ on:
   push:
     branches: [main]
     paths:
-      - 'backend/**'
-      - '.github/workflows/deploy-backend.yml'
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -1356,11 +1399,13 @@ jobs:
 ### JWT Token Strategy
 
 **Access Token:**
+
 - Czas życia: 30 minut
 - Przechowywany: LocalStorage (Frontend)
 - Używany: Każde żądanie API (Authorization header)
 
 **Refresh Token:**
+
 - Czas życia: 7 dni
 - Przechowywany: HttpOnly Cookie (bezpieczniejsze)
 - Używany: Tylko do odświeżania Access Token
@@ -1413,6 +1458,7 @@ if not settings.ALLOW_REGISTRATION:
 ### Dark/Light Mode
 
 **Hierarchia:**
+
 1. **Profil użytkownika (DB)** - jeśli zalogowany
 2. **LocalStorage** - jeśli niezalogowany lub nadpisanie lokalne
 3. **System (prefers-color-scheme)** - domyślnie
@@ -1421,19 +1467,21 @@ if not settings.ALLOW_REGISTRATION:
 // frontend/src/contexts/ThemeContext.tsx
 const ThemeProvider = ({ children }) => {
   const { user } = useAuth();
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
     // Priority: User Profile > LocalStorage > System
     if (user?.theme_preference) {
       setTheme(user.theme_preference);
     } else {
-      const saved = localStorage.getItem('theme');
+      const saved = localStorage.getItem("theme");
       if (saved) {
         setTheme(saved);
       } else {
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        setTheme(systemDark ? 'dark' : 'light');
+        const systemDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
+        setTheme(systemDark ? "dark" : "light");
       }
     }
   }, [user]);
@@ -1449,6 +1497,7 @@ const ThemeProvider = ({ children }) => {
 ### Language Detection
 
 **Hierarchia:**
+
 1. **Profil użytkownika (DB)** - jeśli zalogowany
 2. **Cookie** - ostatni wybór
 3. **Accept-Language Header** - ustawienia przeglądarki
@@ -1456,19 +1505,19 @@ const ThemeProvider = ({ children }) => {
 
 ```typescript
 // frontend/src/lib/i18n.ts
-import { cookies } from 'next/headers';
+import { cookies } from "next/headers";
 
-export function detectLanguage(user?: User): 'pl' | 'en' {
+export function detectLanguage(user?: User): "pl" | "en" {
   if (user?.language) return user.language;
-  
-  const cookieLang = cookies().get('language')?.value;
-  if (cookieLang) return cookieLang as 'pl' | 'en';
-  
+
+  const cookieLang = cookies().get("language")?.value;
+  if (cookieLang) return cookieLang as "pl" | "en";
+
   // Accept-Language header (server-side)
-  const acceptLang = headers().get('accept-language');
-  if (acceptLang?.startsWith('en')) return 'en';
-  
-  return 'pl'; // Default
+  const acceptLang = headers().get("accept-language");
+  if (acceptLang?.startsWith("en")) return "en";
+
+  return "pl"; // Default
 }
 ```
 
@@ -1551,6 +1600,7 @@ export function detectLanguage(user?: User): 'pl' | 'en' {
 ### Sentry Integration
 
 **Backend:**
+
 ```python
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -1563,6 +1613,7 @@ sentry_sdk.init(
 ```
 
 **Frontend:**
+
 ```typescript
 import * as Sentry from "@sentry/nextjs";
 
@@ -1596,6 +1647,7 @@ def log_scraper_run(source: str, jobs_found: int):
 ## 13. Faza Implementacji (Kontekst)
 
 ### Faza 1 (MVP - UI/Backend API)
+
 1. Landing Page
 2. Registration + Login (z feature flag)
 3. Admin Panel - Job Sources CRUD
@@ -1608,6 +1660,7 @@ def log_scraper_run(source: str, jobs_found: int):
 **Cel:** Użytkownik może się zarejestrować, zalogować, skonfigurować profil i zarządzać widokami. Brak scrapowania.
 
 ### Faza 2 (Scraping)
+
 1. Implementacja scraperów (NoFluffJobs, SolidJobs, JustJoinIT)
 2. APScheduler integration
 3. Cron job setup
@@ -1616,6 +1669,7 @@ def log_scraper_run(source: str, jobs_found: int):
 **Cel:** System automatycznie pobiera oferty i prezentuje użytkownikowi.
 
 ### Faza 3 (Polish & Scale)
+
 1. Blacklist firm
 2. Ghosting detection
 3. Export/Import
@@ -1627,6 +1681,7 @@ def log_scraper_run(source: str, jobs_found: int):
 ## Podsumowanie
 
 Ten dokument definiuje **pełną architekturę** systemu J(ob)Hunt:
+
 - **Struktura repozytorium** (Mono-repo z podziałem backend/frontend)
 - **Schema bazy danych** (6 tabel z relacjami)
 - **API Endpoints** (Public, Protected, Admin)
@@ -1642,4 +1697,3 @@ Pierwsza faza skupia się na UI i backend API bez scrapowania. Scraping to osobn
 ---
 
 **Następny krok:** `implementationPlan.md` - szczegółowa lista zadań do wykonania.
-
